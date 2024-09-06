@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import autogen
 import os
 import json
@@ -10,7 +11,6 @@ from google.colab import userdata
 #        "api_key": os.getenv('OPENAI_API_KEY')
 #    }]
 
-
 # API Configuracion para Mistral -- Preferimos usar esta para las pruebas ya que no hay que pagar y es tan buena como la de OpenAI
 api_config = [{
         "model": "mistral-large-latest",
@@ -18,6 +18,16 @@ api_config = [{
         "api_key": os.getenv('MISTRAL_API_KEY'),
         "api_type": "mistral"
     }]
+
+# Configuración para el LLM, incluyendo lógica de reintentos y semilla de caché para consistencia
+llm_config = {
+    "config_list": api_config, 
+    "cache_seed": 42,  # Semilla de caché para un comportamiento consistente
+    "retry_on_rate_limit": True,  # Reintentar si se alcanza el límite de la API
+    "retry_on_timeout": True,     # Reintentar si hay un tiempo de espera
+    "max_retries": 5,             # Número máximo de reintentos
+    "retry_delay": 0.3,           # Retraso más corto para reintentos más rápidos
+}
 
 # User Proxy Agent
 user_proxy = autogen.UserProxyAgent(
@@ -28,64 +38,65 @@ user_proxy = autogen.UserProxyAgent(
 )
 
 # Define custom temperature for each agent
-product_manager_temp = 0.8   # More creative than the business analyst
-business_analyst_temp = 0.6  # Less creative, more structured
-coder_temp = 0.7             # Similar to the architect
-architect_temp = 0.7         # Similar to the coder
-qa_temp = 0.6                # Same as business analyst
 
+llm_config_high = llm_config.copy()
+llm_config_high["temperature"] = 0.9 # More creative than usual
+
+llm_config_low = llm_config.copy()
+llm_config_low["temperature"] = 0.5 # Less creative, more structured
+
+llm_config_normal = llm_config.copy()
+llm_config_normal["temperature"] = 0.7 # Normal level of creativity
 
 # Product Manager Agent
-llm_config_pm = {"config_list": api_config, "temperature": product_manager_temp, "cache_seed": 42}
-
 pm = autogen.AssistantAgent(
     name="Product_Manager",
-    system_message="You are an amazing Product Manager, creative in software product ideas, with knowledge in multiples verticals",
-    llm_config=llm_config_pm,
+    system_message=("You are an experienced Product Manager with a visionary approach to software product development. "
+                    "You have deep expertise in crafting product requirements and strategies. You are responsible for defining "
+                    "the high-level goals, features, and roadmaps for the project. Provide detailed insights on innovative "
+                    "product features, competitive analysis, and how the AI integration will improve workflow automation."),
+    llm_config=llm_config_high,
 )
-
 
 # Business Analyst Agent
-llm_config_ba = {"config_list": api_config, "temperature": business_analyst_temp, "cache_seed": 42}
-
 ba = autogen.AssistantAgent(
     name="Business_Analyst",
-    system_message="Act as an Expert in business analysis and requirements gathering.",
-    llm_config=llm_config_ba,
+    system_message=("You are a highly skilled Business Analyst specializing in gathering and documenting detailed requirements. "
+                    "Your task is to identify and refine business needs, use cases, and user stories for the project. Focus on "
+                    "defining the user requirements, functional specifications, and processes that will help guide the development."),
+    llm_config=llm_config_low,
 )
-
 
 # Architect Agent
-llm_config_coder = {"config_list": api_config, "temperature": coder_temp, "cache_seed": 42}
-
 architect = autogen.AssistantAgent(
     name="Architect",
-    system_message="You are a Software Architect, with expereience in creating escalable and solid architectures, you have knowledge of Microservices and distributed monolith, as well architecture for FrontEnd in Web and Mobile. You are responsible for defining the architecture and design decisions.",
-    llm_config=llm_config_coder,
+    system_message=("You are a seasoned Software Architect with expertise in designing scalable and reliable architectures. "
+                    "Your task is to define the technical architecture for the project, focusing on designing robust back-end services, "
+                    "microservices, and front-end systems. You are also responsible for selecting appropriate technologies and ensuring "
+                    "that the architecture supports the AI-based features of the system."),
+        llm_config=llm_config_normal,
 )
-
 
 # Coder Assistant Agent
-llm_config_architect = {"config_list": api_config, "temperature": architect_temp, "cache_seed": 42}
-
 coder = autogen.AssistantAgent(
     name="Coder",
-    system_message="Act as a Staff Software Engineer.",
-    llm_config=llm_config_architect,
+    system_message=("You are a Senior Software Engineer focusing on implementation. Your task is to provide detailed insights "
+                    "how the system will be built, focusing on coding best practices, efficient algorithms, and technology stacks. "
+                    "You will work closely with the architect and be responsible for providing a detailed implementation plan."),
+    llm_config=llm_config_normal,
 )
 
-
 # QA Agent
-llm_config_qa = {"config_list": api_config, "temperature": qa_temp, "cache_seed": 42}
-
 qa = autogen.AssistantAgent(
     name="QA",
-    system_message="Expert in testing strategies, risk analysis and creating BDD specifications. You are responsible to create the Testing Plan, y Gerhkin Specifications",
-    llm_config=llm_config_qa,
+    system_message=("You are an expert in Quality Assurance and testing strategies. Your responsibility is to create a comprehensive "
+                    "testing plan that covers functional, integration, and system-level tests. Focus on defining BDD specifications, "
+                    "test cases, and risk analysis to ensure the product is reliable and of high quality. You also need to identify "
+                    "potential edge cases and ensure that the AI-related features are thoroughly tested."),
+        llm_config=llm_config_low,
 )
 
 # Documentation Agent
-llm_config = {"config_list": api_config, "cache_seed": 42}
 
 class DocumentationAgent(autogen.AssistantAgent):
     def __init__(self, name, llm_config):
@@ -132,8 +143,14 @@ class DocumentationAgent(autogen.AssistantAgent):
 # Instantiate the Documentation Agent
 doc_agent = DocumentationAgent(
     name="Documentation_Agent",
-    llm_config=llm_config
+    llm_config=llm_config_normal
 )
+
+# GroupChat Setup with all agents
+groupchat = autogen.GroupChat(agents=[user_proxy, pm, ba, architect, coder, qa, doc_agent], messages=[], max_round=12)
+
+# GroupChat Manager to orchestrate the chat
+manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
 
 # GroupChat Setup with all agents
 groupchat = autogen.GroupChat(agents=[user_proxy, pm, ba, architect, coder, qa, doc_agent], messages=[], max_round=12)
