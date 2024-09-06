@@ -9,7 +9,7 @@ from autogen.coding import LocalCommandLineCodeExecutor
 # apiConfig = [{
 #        "model": "gpt-4o-mini",
 #        "max_tokens": 500,
-#        "api_key": userdata.get('OPENAI_API_KEY')
+#        "api_key": os.getenv('OPENAI_API_KEY')
 #    }]
 
 
@@ -17,7 +17,7 @@ from autogen.coding import LocalCommandLineCodeExecutor
 api_config = [{
         "model": "mistral-large-latest",
         "max_tokens": 1000,
-        "api_key": userdata.get('MISTRAL_API_KEY'),
+        "api_key": os.getenv('MISTRAL_API_KEY'),
         "api_type": "mistral"
     }]
 
