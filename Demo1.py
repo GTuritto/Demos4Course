@@ -51,8 +51,11 @@ proxy_usuario = autogen.UserProxyAgent(
     },
 )
 
+task_request = "Genera la grafica YTD de precios y volumen del Bitcoin en USD y guardalo en un archivo con el nombre output.png"
+
 # Entrada dinámica de solicitud del usuario para cualquier tarea o gráfico
-task_request = input("Por favor, ingrese la tarea que desea que el asistente complete: ")
+# task_request = input("Por favor, ingrese la tarea que desea que el asistente complete: ")
+# task_request += " y guarda el resultado en el archivo output.png"
 
 # Inicia una conversación para solicitar cualquier tarea de forma dinámica
 proxy_usuario.initiate_chat(
