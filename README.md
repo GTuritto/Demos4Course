@@ -53,35 +53,33 @@ sequenceDiagram
 
 
 ## Demo2
-### Participants:
-- **User** (External actor interacting with the system)
-- **UserProxyAgent** (Proxy for the human input)
-- **Product Manager** (PM) (Collaborates in Phase 1)
-- **Business Analyst** (BA) (Collaborates in Phase 1)
-- **Architect** (Collaborates in Phase 2)
-- **Coder** (Collaborates in Phase 2)
-- **QA** (Collaborates in Phase 2)
-- **Documentation Agent** (Responsible for collecting and finalizing the documentation)
+### Key Components:
+
+1. **User**: Initiates the project request by providing a description.
+2. **UserProxyAgent**: Represents the user and forwards the project description and requests to other agents.
+3. **Project Manager (PM)**: Responsible for creating a detailed delivery plan with milestones, timelines, and resource allocation.
+4. **Product Manager (Product_Manager)**: Creates the Product Requirements Document (PRD) detailing the project's features and objectives.
+5. **Business Analyst (BA)**: Document use cases and create a diagram of them.
+6. **Architect**: Designs the system architecture using C4 and Mermaid diagrams.
+7. **Coder**: Prepares a detailed implementation plan focusing on best coding practices and efficient algorithms.
+8. **QA**: Creates a testing plan, including functional, integration, and regression testing, and provides BDD specifications in Gherkin.
+9. **Documentation Agent**: This person is responsible for compiling contributions from other agents and generating the final project documentation.
+10. **GroupChat**: Coordinates and manages communication among agents during the project.
+11. **GroupChatManager**: Orchestrates the workflow of the group chat, ensuring smooth communication and task execution.
 
 ### Sequence Flow:
-1. **User** sends an initial message via **UserProxyAgent**: The user initializes the conversation with the group chat by providing the message: *"We are designing a new clone of Jira, we want to include AI in order to help with the creation of Tickets and assigning to the right person."*.
-3. **Phase 1:** **Product Manager** and **Business Analyst** collaboration:
-- **Product Manager** responds with product requirements and contributes to the documentation through the Documentation Agent.
-- **Business Analyst** responds with business requirements and use cases, also contributing to the Documentation Agent.
-3. **Phase 2:** **Coder**, **Architect**, and **QA** collaboration:
-- **Coder** responds with the implementation plan and contributes it to the Documentation Agent.
-- **Architect** responds with architectural decisions and contributes it to the Documentation Agent.
-- **QA** responds with the testing plan and contributes to the Documentation Agent.
-4. **Phase 3:** Self-reflection and Peer Review:
-Each agent (except **UserProxyAgent** and **Documentation_Agent**) reflects on their contribution and suggests improvements.
-Each agent also peer-reviewed other agents' contributions; their feedback was stored in the documentation.
-5. **Final Documentation Generation:** After the collaboration phases, the **Documentation Agent** generates the final document by compiling all contributions, self-reflections, and peer reviews.
 
-### Key Interactions:
-1. **UserProxyAgent** sends an initial message to the **GroupChat**.
-2. **GroupChat** coordinates the collaboration phases, requesting contributions from different agents (**PM**, **BA**, **Architect**, **Coder**, **QA**).
-3. Each agent sends its contribution to the **Documentation Agent**.
-4. In **Phase 3**, agents contribute self-reflections and peer reviews, which are also stored in the final document by the **Documentation Agent**.
+1. **User provides a project description**: The user is asked to describe the project.
+2. **UserProxyAgent forwards the project description**: The description is passed to the group chat, where different agents contribute based on their roles.
+3. **Phase 1: Contributions from various agents**:
+    - **Product Manager** contributes the PRD.
+    - **Business Analyst** contributes use cases and a use case diagram.
+    - **Architect** contributes to the system architecture.
+    - **Coder** contributes an implementation plan.
+    - **QA** contributes to the testing plan and BDD specifications.
+    - **Project Manager** contributes to the delivery plan.
+4. **Documentation Agent compiles the contributions**: The documentation agent collects all contributions from the agents.
+5. **Asynchronous document generation**: The documents are generated asynchronously for each section (PRD, use cases, architecture, implementation plan, etc.).
 
 ```mermaid
 sequenceDiagram
@@ -90,34 +88,57 @@ sequenceDiagram
     participant GroupChat
     participant Product_Manager
     participant Business_Analyst
-    participant Coder
     participant Architect
+    participant Coder
     participant QA
+    participant Project_Manager
     participant Documentation_Agent
     participant Filesystem
 
-    User ->> UserProxyAgent: Sends initial message
-    UserProxyAgent ->> GroupChat: Forward message to GroupChat
-    GroupChat ->> Product_Manager: Request Product Requirements (Phase 1)
-    Product_Manager ->> Documentation_Agent: Contribute Product Requirements
-    GroupChat ->> Business_Analyst: Request Business Requirements (Phase 1)
-    Business_Analyst ->> Documentation_Agent: Contribute Business Requirements
-
-    GroupChat ->> Coder: Request Implementation Plan (Phase 2)
+    User ->> UserProxyAgent: Provide project description
+    UserProxyAgent ->> GroupChat: Forward project description
+    GroupChat ->> Product_Manager: Request PRD
+    Product_Manager ->> Documentation_Agent: Contribute PRD
+    GroupChat ->> Business_Analyst: Request Use Cases
+    Business_Analyst ->> Documentation_Agent: Contribute Use Cases
+    GroupChat ->> Architect: Request System Architecture
+    Architect ->> Documentation_Agent: Contribute Architecture
+    GroupChat ->> Coder: Request Implementation Plan
     Coder ->> Documentation_Agent: Contribute Implementation Plan
-    GroupChat ->> Architect: Request Architectural Decisions (Phase 2)
-    Architect ->> Documentation_Agent: Contribute Architectural Decisions
-    GroupChat ->> QA: Request Testing Plan (Phase 2)
-    QA ->> Documentation_Agent: Contribute Testing Plan
+    GroupChat ->> QA: Request Test Plan & BDD Specs
+    QA ->> Documentation_Agent: Contribute Test Plan
+    QA ->> Documentation_Agent: Contribute BDD Gherkin Specs
+    GroupChat ->> Project_Manager: Request Delivery Plan
+    Project_Manager ->> Documentation_Agent: Contribute Delivery Plan
+    
+    Documentation_Agent ->> Filesystem: Generate and Save PRD
+    Documentation_Agent ->> Filesystem: Generate and Save Use Cases
+    Documentation_Agent ->> Filesystem: Generate and Save System Architecture
+    Documentation_Agent ->> Filesystem: Generate and Save Implementation Plan
+    Documentation_Agent ->> Filesystem: Generate and Save Test Plan
+    Documentation_Agent ->> Filesystem: Generate and Save BDD Gherkin Specs
+    Documentation_Agent ->> Filesystem: Generate and Save Delivery Plan
 
-    GroupChat ->> All Agents: Self-reflection (Phase 3)
-    All Agents ->> Documentation_Agent: Contribute Self-reflection
-
-    GroupChat ->> All Agents: Peer Review (Phase 3)
-    All Agents ->> Documentation_Agent: Contribute Peer Review
-
-    Documentation_Agent ->> Filesystem: Generate Final Document
 ```
+### Explanation of the Code Flow:
+
+1. **Loading environment variables**: The code first loads environment variables from a `.env` file using `load_dotenv()`. These variables are used to configure the API keys for the Mistral and OpenAI APIs.
+2. **LLM Configuration**: Three configurations for the language model (LLM) are created with different temperature settings (`high`, `normal`, and `low`), each representing different creativity levels (e.g., higher temperature for creative tasks, lower temperature for structured tasks).
+3. **Agent Initialization**: Various agents are initialized, each responsible for a specific aspect of the project. The agents are configured using the Mistral API and their respective system messages, which define their responsibilities.
+    - **UserProxyAgent**: Handles user requests and code execution.
+    - **Product Manager, Business Analyst, Architect, Coder, QA, Project Manager**: Specialized agents contribute to different project documents.
+    - **Documentation Agent**: Collects contributions and generates the final project documents.
+4. **Group Chat and Manager Setup**: The group chat and manager (`GroupChatManager`) are initialized, managing the agents' interactions and communications.
+5. **Project Workflow**:
+    - The project workflow starts when the user provides a description of the project.
+    - The `UserProxyAgent` sends this description to the group chat, prompting contributions from various agents.
+    - Each agent contributes content (e.g., PRD, use cases, architecture) to the **Documentation Agent**, which compiles everything.
+    - The contributions are generated asynchronously and saved to the filesystem as markdown files.
+6. **Asynchronous Document Generation**: The final project documents are generated asynchronously, ensuring non-blocking execution and allowing agents to work simultaneously.
+
+### Summary:
+
+This code sets up a collaborative environment where multiple AI agents contribute to different aspects of a project (e.g., planning, documentation, testing). The agents operate in phases, and their outputs are compiled into a final set of project documents. The asynchronous execution ensures efficient handling of multiple tasks, while retries and error handling provide resilience in the process.
 
 ## How to Get Started
 To clone the repository and set up your local environment, follow these steps:
